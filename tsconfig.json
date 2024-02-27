@@ -12,6 +12,12 @@
     "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
+      "routes/*": ["./src/routes/*"],
+      "controllers/*": ["./src/controllers/*"],
+      "middlewares/*": ["./src/middlewares/*"],
+      "utils/*": ["./src/utils/*"],
+      "models/*": ["./src/models/*"],
+      "mail/*": ["./src/mail/*"],
       "src/*": ["./src/*"]
     }
   }
