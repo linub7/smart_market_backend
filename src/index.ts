@@ -17,5 +17,9 @@ app.use(express.urlencoded({ extended: false }));
 // Routes
 app.use('/api/v1/auth', authRoutes);
 
+app.use(function (err, _req, res, _next) {
+  res.status(500).json({ message: err?.message });
+} as express.ErrorRequestHandler);
+
 connectDB();
 app.listen(PORT, () => log.info(`Server is listening on port ${PORT}`));

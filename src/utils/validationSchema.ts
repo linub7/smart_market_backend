@@ -1,5 +1,15 @@
 import * as yup from 'yup';
 
+const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+yup.addMethod(yup.string, 'email', function validateEmail(message) {
+  return this.matches(emailRegex, {
+    message,
+    name: 'email',
+    excludeEmptyString: true,
+  });
+});
+
 export const SignupUserSchema = yup.object().shape({
   name: yup
     .string()

@@ -1,7 +1,9 @@
 import { RequestHandler } from 'express';
 import * as yup from 'yup';
 
-export const validate = (schema: any): RequestHandler => {
+import { sendErrorResponse } from 'utils/helpers';
+
+export const validate = (schema: yup.Schema): RequestHandler => {
   return async (req, res, next) => {
     const { body } = req;
 
@@ -27,9 +29,9 @@ export const validate = (schema: any): RequestHandler => {
       next();
     } catch (error) {
       if (error instanceof yup.ValidationError) {
-        return res.status(422).json({
-          error: error.message,
-        });
+        return sendErrorResponse(res, error?.message, 422);
+      } else {
+        next(error);
       }
     }
   };
