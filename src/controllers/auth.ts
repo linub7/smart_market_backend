@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
+import JWT from 'jsonwebtoken';
 
 import AuthVerificationToken from 'models/AuthVerificationToken';
 import User from 'models/User';
 import { sendVerificationMail } from 'utils/email';
 import { createToken, sendErrorResponse } from 'utils/helpers';
 import { asyncHandler } from 'middlewares/async';
+import { JWT_TOKEN } from 'utils/variables';
 
 export const signup = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -25,16 +27,97 @@ export const signup = asyncHandler(
 
     await AuthVerificationToken.create({ owner: user?._id, token });
     const link = `http://localhost:5000/verify?id=${user?._id}&token=${token}`;
+    console.log({ link });
 
-    const info = await sendVerificationMail(link, {
+    await sendVerificationMail(link, {
       name,
       email,
       userId: user._id.toString(),
     });
-    console.log(info);
+
     return res.status(201).json({
       status: 'success',
-      data: { data: 'Please check your inbox to verify your account' },
+      data: { message: 'Please check your inbox to verify your account' },
+    });
+  }
+);
+
+export const signin = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    body: { email, password },
+  } = req;
+
+  const existedUser = await User.findOne({ email });
+  if (!existedUser) return sendErrorResponse(res, 'Invalid credentials.', 403);
+
+  const matched = await existedUser.comparePassword(password);
+  if (!matched) return sendErrorResponse(res, 'Invalid credentials.', 403);
+
+  const payload = { id: existedUser?._id };
+  const accessToken = JWT.sign(payload, JWT_TOKEN, {
+    expiresIn: '15m',
+  });
+  const refreshToken = JWT.sign(payload, JWT_TOKEN);
+
+  if (!existedUser?.tokens) existedUser.tokens = [refreshToken];
+  else existedUser.tokens.push(refreshToken);
+
+  await existedUser.save();
+
+  const profile = {
+    id: existedUser?._id,
+    email: existedUser?.email,
+    name: existedUser?.name,
+    verified: existedUser?.verified,
+  };
+
+  res.json({
+    status: 'success',
+    data: { profile, tokens: { refreshToken, accessToken } },
+  });
+});
+
+export const myInfo = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { user } = req;
+
+    return res.json({
+      status: 'success',
+      data: {
+        me: user,
+      },
+    });
+  }
+);
+
+export const verifyEmail = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const {
+      body: { id, token },
+    } = req;
+
+    const authToken = await AuthVerificationToken.findOne({ owner: id });
+    if (!authToken) return sendErrorResponse(res, 'unauthorized request!', 403);
+
+    const isMatched = await authToken.compareToken(token);
+    if (!isMatched)
+      return sendErrorResponse(
+        res,
+        'unauthorized request, invalid token!',
+        403
+      );
+
+    await User.findByIdAndUpdate(
+      id,
+      { verified: true },
+      { runValidators: true, new: true }
+    );
+
+    await AuthVerificationToken.findByIdAndDelete(authToken?._id);
+
+    return res.json({
+      status: 'success',
+      message: 'Thanks for joining us, your email verified successfully.',
     });
   }
 );

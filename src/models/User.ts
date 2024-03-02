@@ -1,14 +1,7 @@
 import { Model, ObjectId, Schema, model } from 'mongoose';
 import { compare, hash, genSalt } from 'bcrypt';
 
-export interface UserDocument {
-  _id: ObjectId;
-  name: string;
-  email: string;
-  password: string;
-  verified: boolean;
-  avatar?: { url: string; publicId: string };
-}
+import { UserDocument } from 'src/@types/user';
 
 interface Methods {
   comparePassword(password: string): Promise<boolean>;
@@ -40,6 +33,7 @@ const UserSchema = new Schema<UserDocument, {}, Methods>(
       url: String,
       publicId: String,
     },
+    tokens: [String],
   },
   {
     timestamps: true,

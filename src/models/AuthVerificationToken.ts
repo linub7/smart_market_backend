@@ -1,11 +1,7 @@
 import { Model, ObjectId, Schema, model } from 'mongoose';
 import { compare, hash, genSalt } from 'bcrypt';
 
-interface AuthVerificationTokenDocument {
-  owner: ObjectId;
-  token: string;
-  createdAt: Date;
-}
+import { AuthVerificationTokenDocument } from 'src/@types/auth';
 
 interface Methods {
   compareToken(token: string): Promise<boolean>;
