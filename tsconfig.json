@@ -19,6 +19,7 @@
       "models/*": ["./src/models/*"],
       "mail/*": ["./src/mail/*"],
       "constants/*": ["./src/constants/*"],
+      "cloud/*": ["./src/cloud/*"],
       "src/*": ["./src/*"]
     }
   }

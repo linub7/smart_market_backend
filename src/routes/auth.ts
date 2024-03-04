@@ -11,6 +11,8 @@ import {
   generateForgetPasswordLink,
   grantValid,
   updatePassword,
+  updateProfile,
+  updateProfileAvatar,
 } from 'controllers/auth';
 import {
   ForgotPasswordSchema,
@@ -18,9 +20,11 @@ import {
   SignupUserSchema,
   UpdatePasswordSchema,
   VerifyTokenSchema,
+  UpdateProfileSchema,
 } from 'utils/validationSchema';
 import { validate } from 'middlewares/validator';
 import { isAuth, isValidPasswordResetToken } from 'middlewares/auth';
+import fileParser from 'middlewares/fileParser';
 
 const router = Router();
 
@@ -47,6 +51,13 @@ router.post(
   isValidPasswordResetToken,
   updatePassword
 );
+router.patch(
+  '/update-profile',
+  validate(UpdateProfileSchema),
+  isAuth,
+  updateProfile
+);
+router.post('/update-profile-avatar', isAuth, fileParser, updateProfileAvatar);
 router.get('/me', isAuth, myInfo);
 
 export default router;

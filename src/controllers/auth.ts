@@ -8,7 +8,7 @@ import {
   sendResetPasswordMail,
   sendUpdatePasswordMail,
 } from 'utils/email';
-import { createToken, sendErrorResponse } from 'utils/helpers';
+import { createToken, formatUser, sendErrorResponse } from 'utils/helpers';
 import { asyncHandler } from 'middlewares/async';
 import {
   JWT_TOKEN,
@@ -16,6 +16,7 @@ import {
   VERIFICATION_LINK,
 } from 'utils/variables';
 import PasswordResetToken from 'models/PasswordResetToken';
+import cloudinary from 'cloud/index';
 
 export const signup = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -305,6 +306,93 @@ export const updatePassword = asyncHandler(
       status: 'success',
       data: {
         message: 'Password resets successfully',
+      },
+    });
+  }
+);
+
+export const updateProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      user: { id },
+      body: { name },
+    } = req;
+
+    if (req.user.name === name)
+      return sendErrorResponse(res, 'Name must be different', 400);
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { name },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) return sendErrorResponse(res, 'User not found!', 404);
+
+    return res.json({
+      status: 'success',
+      data: {
+        message: 'Your profile updated successfully.',
+        profile: { ...req.user, name },
+      },
+    });
+  }
+);
+
+export const updateProfileAvatar = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      body: { name },
+      user: { id },
+      files: { avatar },
+    } = req;
+
+    if (Array.isArray(avatar))
+      return sendErrorResponse(res, 'Multiple files are not allowed', 422);
+
+    if (!avatar.mimetype?.startsWith('image'))
+      return sendErrorResponse(
+        res,
+        'Invalid image type, Only images are allowed',
+        422
+      );
+
+    const existedUser = await User.findById(id).select('-password');
+    if (!existedUser) return sendErrorResponse(res, 'User not found', 404);
+
+    if (typeof name !== 'string')
+      return sendErrorResponse(res, 'Invalid name', 422);
+
+    if (name.trim().length < 3)
+      return sendErrorResponse(res, 'Invalid name', 422);
+
+    existedUser.name = name;
+
+    if (existedUser?.avatar?.publicId) {
+      await cloudinary.uploader.destroy(existedUser.avatar?.publicId);
+    }
+
+    const { public_id, secure_url } = await cloudinary.uploader.upload(
+      avatar.filepath,
+      {
+        width: 300,
+        height: 300,
+        crop: 'thumb',
+        gravity: 'face',
+      }
+    );
+
+    existedUser.avatar = {
+      url: secure_url,
+      publicId: public_id,
+    };
+
+    await existedUser.save();
+
+    return res.json({
+      status: 'success',
+      data: {
+        profile: formatUser(existedUser),
       },
     });
   }

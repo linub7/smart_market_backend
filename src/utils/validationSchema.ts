@@ -1,7 +1,7 @@
+import * as yup from 'yup';
+
 import { EMAIL_REGEX, PASSWORD_REGEX } from 'constants/index';
 import { isValidObjectId } from 'mongoose';
-
-import * as yup from 'yup';
 
 yup.addMethod(yup.string, 'email', function validateEmail(message) {
   return this.matches(EMAIL_REGEX, {
@@ -59,4 +59,13 @@ export const ForgotPasswordSchema = yup.object().shape({
 export const UpdatePasswordSchema = yup.object().shape({
   ...tokenAndId,
   ...password,
+});
+
+export const UpdateProfileSchema = yup.object().shape({
+  name: yup
+    .string()
+    .trim()
+    .required('Name is required')
+    .min(3, 'Name is too short')
+    .max(20, 'Name is too long'),
 });
