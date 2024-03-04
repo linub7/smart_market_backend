@@ -9,6 +9,8 @@ import { asyncHandler } from './async';
 import { JWT_TOKEN } from 'utils/variables';
 import User from 'models/User';
 import { sendErrorResponse } from 'utils/helpers';
+import PasswordResetToken from 'models/PasswordResetToken';
+import { sendResetPasswordMail } from 'utils/email';
 
 export const isAuth = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -38,5 +40,31 @@ export const isAuth = asyncHandler(
 
       next(error);
     }
+  }
+);
+
+export const isValidPasswordResetToken = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const {
+      body: { id, token },
+    } = req;
+
+    const resetPasswordToken = await PasswordResetToken.findOne({ owner: id });
+    if (!resetPasswordToken)
+      return sendErrorResponse(
+        res,
+        'Unauthorized request, invalid credentials!',
+        401
+      );
+
+    const matched = await resetPasswordToken.compareToken(token);
+    if (!matched)
+      return sendErrorResponse(
+        res,
+        'Unauthorized request, invalid credentials!',
+        401
+      );
+
+    next();
   }
 );

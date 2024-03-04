@@ -18,6 +18,7 @@
       "utils/*": ["./src/utils/*"],
       "models/*": ["./src/models/*"],
       "mail/*": ["./src/mail/*"],
+      "constants/*": ["./src/constants/*"],
       "src/*": ["./src/*"]
     }
   }

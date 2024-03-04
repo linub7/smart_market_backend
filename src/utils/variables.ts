@@ -6,4 +6,7 @@ export const {
   MAILTRAP_PASS,
   JWT_TOKEN,
   NODE_ENV,
+  VERIFICATION_LINK,
+  SMTP_HOST,
+  PASSWORD_RESET_LINK,
 } = env;

@@ -3,10 +3,19 @@ import JWT from 'jsonwebtoken';
 
 import AuthVerificationToken from 'models/AuthVerificationToken';
 import User from 'models/User';
-import { sendVerificationMail } from 'utils/email';
+import {
+  sendVerificationMail,
+  sendResetPasswordMail,
+  sendUpdatePasswordMail,
+} from 'utils/email';
 import { createToken, sendErrorResponse } from 'utils/helpers';
 import { asyncHandler } from 'middlewares/async';
-import { JWT_TOKEN } from 'utils/variables';
+import {
+  JWT_TOKEN,
+  PASSWORD_RESET_LINK,
+  VERIFICATION_LINK,
+} from 'utils/variables';
+import PasswordResetToken from 'models/PasswordResetToken';
 
 export const signup = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -26,9 +35,8 @@ export const signup = asyncHandler(
     const token = createToken();
 
     await AuthVerificationToken.create({ owner: user?._id, token });
-    const link = `http://localhost:5000/verify.html?id=${user?._id}&token=${token}`;
-    console.log({ link });
 
+    const link = `${VERIFICATION_LINK}?id=${user?._id}&token=${token}`;
     await sendVerificationMail(link, {
       name,
       email,
@@ -139,9 +147,7 @@ export const generateVerificationLink = asyncHandler(
     const token = createToken();
     await AuthVerificationToken.create({ owner: id, token });
 
-    const link = `http://localhost:5000/verify.html?id=${id}&token=${token}`;
-    console.log({ link });
-
+    const link = `${VERIFICATION_LINK}?id=${id}&token=${token}`;
     await sendVerificationMail(link, {
       name,
       email,
@@ -229,3 +235,77 @@ export const signout = asyncHandler(async (req: Request, res: Response) => {
     data: { message: 'Signout successfully done.' },
   });
 });
+
+export const generateForgetPasswordLink = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      body: { email },
+    } = req;
+
+    const existedUser = await User.findOne({ email });
+    if (!existedUser) return sendErrorResponse(res, 'Account not found', 404);
+
+    // Remove token
+    await PasswordResetToken.findOneAndDelete({ owner: existedUser?._id });
+
+    // create new token
+    const token = createToken();
+    await PasswordResetToken.create({ owner: existedUser?._id, token });
+
+    // send the link to user's email
+    const passwordResetLink = `${PASSWORD_RESET_LINK}?id=${existedUser?._id}&token=${token}`;
+    await sendResetPasswordMail(passwordResetLink, {
+      name: existedUser?.name,
+      email: existedUser?.email,
+      userId: existedUser?._id?.toString(),
+    });
+
+    // send response back
+    return res.json({
+      status: 'success',
+      data: { message: 'Please check your inbox' },
+    });
+  }
+);
+
+export const grantValid = asyncHandler(async (_req: Request, res: Response) => {
+  return res.json({ status: 'success', data: { valid: true } });
+});
+
+export const updatePassword = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      body: { id, password },
+    } = req;
+
+    const existedUser = await User.findById(id);
+    if (!existedUser)
+      return sendErrorResponse(
+        res,
+        'Unauthorized request, invalid credentials!',
+        403
+      );
+
+    const matched = await existedUser.comparePassword(password);
+    if (matched)
+      return sendErrorResponse(res, 'New password must be different!', 422);
+
+    existedUser.password = password;
+    await existedUser.save();
+
+    await PasswordResetToken.findOneAndDelete({ owner: existedUser?._id });
+
+    await sendUpdatePasswordMail('', {
+      name: existedUser.name,
+      email: existedUser.email,
+      userId: existedUser._id.toString(),
+    });
+
+    return res.json({
+      status: 'success',
+      data: {
+        message: 'Password resets successfully',
+      },
+    });
+  }
+);
