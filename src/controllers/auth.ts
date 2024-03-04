@@ -9,7 +9,7 @@ import { asyncHandler } from 'middlewares/async';
 import { JWT_TOKEN } from 'utils/variables';
 
 export const signup = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {
+  async (req: Request, res: Response, _next: NextFunction) => {
     const {
       body: { name, email, password },
     } = req;
@@ -26,7 +26,7 @@ export const signup = asyncHandler(
     const token = createToken();
 
     await AuthVerificationToken.create({ owner: user?._id, token });
-    const link = `http://localhost:5000/verify?id=${user?._id}&token=${token}`;
+    const link = `http://localhost:5000/verify.html?id=${user?._id}&token=${token}`;
     console.log({ link });
 
     await sendVerificationMail(link, {
@@ -117,7 +117,115 @@ export const verifyEmail = asyncHandler(
 
     return res.json({
       status: 'success',
-      message: 'Thanks for joining us, your email verified successfully.',
+      data: {
+        message: 'Thanks for joining us, your email verified successfully.',
+      },
     });
   }
 );
+
+export const generateVerificationLink = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      user: { id, email, name, verified },
+    } = req;
+
+    if (verified)
+      return sendErrorResponse(res, 'You verified your account already', 400);
+
+    // remove previous token
+    await AuthVerificationToken.findOneAndDelete({ owner: id });
+
+    const token = createToken();
+    await AuthVerificationToken.create({ owner: id, token });
+
+    const link = `http://localhost:5000/verify.html?id=${id}&token=${token}`;
+    console.log({ link });
+
+    await sendVerificationMail(link, {
+      name,
+      email,
+      userId: id.toString(),
+    });
+
+    return res.status(201).json({
+      status: 'success',
+      data: { message: 'Token created successfully, Please check your inbox' },
+    });
+  }
+);
+
+export const grantAccessToken = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      body: { refreshToken },
+    } = req;
+
+    if (!refreshToken)
+      return sendErrorResponse(res, 'unauthorized request', 403);
+
+    const payload = JWT.verify(refreshToken, JWT_TOKEN) as { id: string };
+    if (!payload?.id)
+      return sendErrorResponse(res, 'unauthorized request', 401);
+    const existedUser = await User.findOne({
+      _id: payload?.id,
+      tokens: refreshToken,
+    });
+
+    if (!existedUser) {
+      // user is compromised, remove all the previous tokens
+      await User.findByIdAndUpdate(
+        payload?.id,
+        { tokens: [] },
+        { new: true, runValidators: true }
+      );
+      return sendErrorResponse(res, 'unauthorized request', 401);
+    }
+
+    const newPayload = { id: existedUser?._id };
+    const newAccessToken = JWT.sign(newPayload, JWT_TOKEN, {
+      expiresIn: '15m',
+    });
+    const newRefreshToken = JWT.sign(newPayload, JWT_TOKEN);
+
+    const filteredTokens = existedUser?.tokens?.filter(
+      (refreshT: string) => refreshT !== refreshToken
+    );
+    existedUser.tokens = filteredTokens;
+    existedUser.tokens.push(newRefreshToken);
+
+    await existedUser.save();
+
+    return res.json({
+      status: 'success',
+      data: {
+        tokens: {
+          refreshToken: newRefreshToken,
+          accessToken: newAccessToken,
+        },
+      },
+    });
+  }
+);
+
+export const signout = asyncHandler(async (req: Request, res: Response) => {
+  const {
+    user: { id },
+    body: { refreshToken },
+  } = req;
+
+  const existedUser = await User.findOne({ _id: id, tokens: refreshToken });
+  if (!existedUser)
+    return sendErrorResponse(res, 'unauthorized request, user not found!', 403);
+
+  const filteredTokens = existedUser.tokens.filter(
+    (refreshT: string) => refreshT !== refreshToken
+  );
+  existedUser.tokens = filteredTokens;
+  await existedUser.save();
+
+  return res.json({
+    status: 'success',
+    data: { message: 'Signout successfully done.' },
+  });
+});
