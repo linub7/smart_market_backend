@@ -13,4 +13,6 @@ cloudinary.config({
   secure: true,
 });
 
+export const cloudAPI = cloudinary.api;
+
 export default cloudinary;

@@ -17,6 +17,7 @@ import {
 } from 'utils/variables';
 import PasswordResetToken from 'models/PasswordResetToken';
 import cloudinary from 'cloud/index';
+import { uploadImage } from 'utils/upload';
 
 export const signup = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -372,14 +373,21 @@ export const updateProfileAvatar = asyncHandler(
       await cloudinary.uploader.destroy(existedUser.avatar?.publicId);
     }
 
-    const { public_id, secure_url } = await cloudinary.uploader.upload(
-      avatar.filepath,
-      {
-        width: 300,
-        height: 300,
-        crop: 'thumb',
-        gravity: 'face',
-      }
+    // const { public_id, secure_url } = await cloudinary.uploader.upload(
+    //   avatar.filepath,
+    //   {
+    //     width: 300,
+    //     height: 300,
+    //     crop: 'thumb',
+    //     gravity: 'face',
+    //   }
+    // );
+    const { public_id, secure_url } = await uploadImage(
+      avatar?.filepath,
+      300,
+      300,
+      'thumb',
+      true
     );
 
     existedUser.avatar = {

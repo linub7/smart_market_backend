@@ -1,7 +1,8 @@
 import * as yup from 'yup';
+import { isValidObjectId } from 'mongoose';
 
 import { EMAIL_REGEX, PASSWORD_REGEX } from 'constants/index';
-import { isValidObjectId } from 'mongoose';
+import categories from './categories';
 
 yup.addMethod(yup.string, 'email', function validateEmail(message) {
   return this.matches(EMAIL_REGEX, {
@@ -68,4 +69,14 @@ export const UpdateProfileSchema = yup.object().shape({
     .required('Name is required')
     .min(3, 'Name is too short')
     .max(20, 'Name is too long'),
+});
+
+export const CreateProductSchema = yup.object().shape({
+  name: yup.string().required('Name is required!'),
+  description: yup.string().required('description is required!'),
+  category: yup
+    .string()
+    .oneOf(categories, 'Invalid category')
+    .required('Category is required!'),
+  price: yup.number().positive().required('price is required!'),
 });
