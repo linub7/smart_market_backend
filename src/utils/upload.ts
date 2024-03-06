@@ -2,7 +2,7 @@ import { UploadApiResponse } from 'cloudinary';
 
 import cloudinary from 'cloud/index';
 
-export const uploadImage = async (
+export const uploadImageToCloudinary = async (
   filePath: string,
   width: number,
   height: number,
@@ -15,4 +15,10 @@ export const uploadImage = async (
     crop,
     gravity: isFace ? 'face' : '',
   });
+};
+
+export const destroyImageFromCloudinary = async (
+  publicId: string
+): Promise<UploadApiResponse> => {
+  return cloudinary.uploader.destroy(publicId);
 };

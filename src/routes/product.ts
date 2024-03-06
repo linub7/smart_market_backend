@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { isValidObjectId } from 'mongoose';
 
-import { createProduct } from 'controllers/product';
+import {
+  createProduct,
+  updateProduct,
+  deleteProduct,
+} from 'controllers/product';
 import { sendErrorResponse } from 'utils/helpers';
 import { isAuth } from 'middlewares/auth';
 import { validate } from 'middlewares/validator';
@@ -24,5 +28,15 @@ router.post(
   validate(CreateProductSchema),
   createProduct
 );
+
+router.patch(
+  '/:id',
+  isAuth,
+  fileParser,
+  validate(CreateProductSchema),
+  updateProduct
+);
+
+router.delete('/:id', isAuth, deleteProduct);
 
 export default router;
