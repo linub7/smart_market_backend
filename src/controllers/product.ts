@@ -1,10 +1,12 @@
-import { cloudAPI } from 'cloud/index';
-import { MAX_PRODUCT_IMAGES_COUNT } from 'constants/index';
 import { Request, Response } from 'express';
 
+import { MAX_PRODUCT_IMAGES_COUNT } from 'constants/index';
+import { cloudAPI } from 'cloud/index';
 import { asyncHandler } from 'middlewares/async';
 import Product from 'models/Product';
-import { sendErrorResponse } from 'utils/helpers';
+import { UserDocument } from 'src/@types/user';
+import categories from 'utils/categories';
+import { formatProduct, sendErrorResponse } from 'utils/helpers';
 import {
   destroyImageFromCloudinary,
   uploadImageToCloudinary,
@@ -215,5 +217,158 @@ export const deleteProduct = asyncHandler(
       status: 'success',
       data: { message: 'Product deleted successfully!' },
     });
+  }
+);
+
+export const deleteSingleImageFromProduct = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      user,
+      params: { id, imageId },
+    } = req;
+
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: id, owner: user.id },
+      {
+        $pull: {
+          images: { publicId: imageId },
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedProduct)
+      return sendErrorResponse(res, 'Product not found', 404);
+
+    if (updatedProduct.thumbnail?.includes(imageId)) {
+      updatedProduct.thumbnail = updatedProduct.images[0]?.url;
+      await updatedProduct.save();
+    }
+
+    await destroyImageFromCloudinary(imageId);
+
+    return res.json({ status: 'success', data: { product: updatedProduct } });
+  }
+);
+
+export const getAllMyProducts = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      user: { id },
+    } = req;
+    const { page = '1', limit = '10' } = req.query as {
+      page: string;
+      limit: string;
+    };
+
+    const convertedPage = parseInt(page, 10) || 1;
+    const convertedLimit = parseInt(limit, 10) || 10;
+    const startIndex = (convertedPage - 1) * convertedLimit;
+
+    const products = await Product.find({ owner: id })
+      .populate<{
+        owner: UserDocument;
+      }>('owner', 'id name avatar')
+      .sort('-createdAt')
+      .skip(startIndex)
+      .limit(convertedLimit);
+
+    const formattedProducts = products.map((product) => {
+      return {
+        id: product._id,
+        name: product.name,
+        description: product.description,
+        thumbnail: product.thumbnail,
+        category: product.category,
+        price: product.price,
+        date: product.purchasingDate,
+        images: product?.images?.map(({ url }) => url),
+        seller: {
+          id: product.owner._id,
+          name: product.owner.name,
+          avatar: product.owner.avatar?.url,
+        },
+      };
+    });
+
+    return res.json({
+      status: 'success',
+      data: { products: formattedProducts },
+    });
+  }
+);
+
+export const getLatestProducts = asyncHandler(
+  async (_req: Request, res: Response) => {
+    const products = await Product.find({}).sort('-createdAt').limit(10);
+
+    const formattedProducts = products.map((product) => formatProduct(product));
+
+    return res.json({
+      status: 'success',
+      data: { products: formattedProducts },
+    });
+  }
+);
+
+export const getProductsByCategory = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      params: { category },
+    } = req;
+
+    const { page = '1', limit = '10' } = req.query as {
+      page: string;
+      limit: string;
+    };
+
+    const convertedPage = parseInt(page, 10) || 1;
+    const convertedLimit = parseInt(limit, 10) || 10;
+    const startIndex = (convertedPage - 1) * convertedLimit;
+
+    if (!categories.includes(category))
+      return sendErrorResponse(res, 'Invalid category', 422);
+
+    const products = await Product.find({ category })
+      .skip(startIndex)
+      .limit(convertedLimit)
+      .sort('-createdAt');
+    const formattedProducts = products.map((product) => formatProduct(product));
+
+    return res.json({
+      status: 'success',
+      data: { products: formattedProducts },
+    });
+  }
+);
+
+export const getSingleProduct = asyncHandler(
+  async (req: Request, res: Response) => {
+    const {
+      params: { id },
+    } = req;
+
+    const product = await Product.findById(id).populate<{
+      owner: UserDocument;
+    }>('owner', 'id name avatar');
+    if (!product) return sendErrorResponse(res, 'Product not found', 404);
+
+    const formattedProduct = {
+      id: product._id,
+      name: product.name,
+      description: product.description,
+      thumbnail: product.thumbnail,
+      category: product.category,
+      price: product.price,
+      date: product.purchasingDate,
+      images: product?.images?.map(({ url }) => url),
+      seller: {
+        id: product.owner._id,
+        name: product.owner.name,
+        avatar: product.owner.avatar?.url,
+      },
+    };
+
+    return res.json({ status: 'success', data: { product: formattedProduct } });
   }
 );

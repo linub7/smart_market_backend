@@ -5,6 +5,11 @@ import {
   createProduct,
   updateProduct,
   deleteProduct,
+  deleteSingleImageFromProduct,
+  getSingleProduct,
+  getProductsByCategory,
+  getLatestProducts,
+  getAllMyProducts,
 } from 'controllers/product';
 import { sendErrorResponse } from 'utils/helpers';
 import { isAuth } from 'middlewares/auth';
@@ -21,22 +26,20 @@ router.param('id', (req, res, next, val) => {
   next();
 });
 
-router.post(
-  '/',
-  isAuth,
-  fileParser,
-  validate(CreateProductSchema),
-  createProduct
-);
+router
+  .route('/')
+  .get(isAuth, getAllMyProducts)
+  .post(isAuth, fileParser, validate(CreateProductSchema), createProduct);
 
-router.patch(
-  '/:id',
-  isAuth,
-  fileParser,
-  validate(CreateProductSchema),
-  updateProduct
-);
+router.get('/latest', getLatestProducts);
 
-router.delete('/:id', isAuth, deleteProduct);
+router
+  .route('/:id')
+  .get(isAuth, getSingleProduct)
+  .patch(isAuth, fileParser, validate(CreateProductSchema), updateProduct)
+  .delete(isAuth, deleteProduct);
+
+router.delete('/:id/images/:imageId', isAuth, deleteSingleImageFromProduct);
+router.get('/categories/:category', getProductsByCategory);
 
 export default router;

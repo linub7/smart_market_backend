@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 import { Response } from 'express';
+
+import { ProductDocument } from 'src/@types/product';
 import { UserDocument } from 'src/@types/user';
 
 export const createToken = (): string => {
@@ -20,5 +22,15 @@ export const formatUser = (user: UserDocument) => {
     email: user?.email,
     verified: user?.verified,
     avatar: user?.avatar?.url,
+  };
+};
+
+export const formatProduct = (product: ProductDocument) => {
+  return {
+    id: product._id,
+    name: product.name,
+    thumbnail: product.thumbnail,
+    category: product.category,
+    price: product.price,
   };
 };

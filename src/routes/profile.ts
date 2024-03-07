@@ -14,6 +14,6 @@ router.param('id', (req, res, next, val) => {
   next();
 });
 
-router.get('/infos/:id', isAuth, getPublicProfile);
+router.route('/:id').get(isAuth, getPublicProfile);
 
 export default router;

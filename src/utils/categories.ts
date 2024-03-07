@@ -1,15 +1,15 @@
 const categories: string[] = [
-  'Electronics',
-  'Fashion',
-  'Fitness',
-  'Home & Kitchen',
-  'Books',
-  'Toys & Games',
-  'Beauty & Personal Care',
-  'Sports & Outdoors',
-  'Automotive',
-  'Tools & Home Improvement',
-  'Other',
+  'electronics',
+  'fashion',
+  'fitness',
+  'home-and-Kitchen',
+  'books',
+  'toys-and-games',
+  'beauty-and-personal-care',
+  'sports-and-outdoors',
+  'automotive',
+  'tools-and-home-improvement',
+  'other',
 ];
 
 export default categories.sort();
