@@ -79,6 +79,7 @@ export const signin = asyncHandler(async (req: Request, res: Response) => {
     email: existedUser?.email,
     name: existedUser?.name,
     verified: existedUser?.verified,
+    avatar: existedUser?.avatar?.url,
   };
 
   res.json({

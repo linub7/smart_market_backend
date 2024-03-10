@@ -30,6 +30,7 @@ export const isAuth = asyncHandler(
         name: user?.name,
         email: user?.email,
         verified: user?.verified,
+        avatar: user?.avatar?.url,
       };
       next();
     } catch (error) {
