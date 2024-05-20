@@ -2,7 +2,7 @@ const categories: string[] = [
   'electronics',
   'fashion',
   'fitness',
-  'home-and-Kitchen',
+  'home-and-kitchen',
   'books',
   'toys-and-games',
   'beauty-and-personal-care',

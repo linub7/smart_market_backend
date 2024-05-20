@@ -18,6 +18,7 @@ import {
 import PasswordResetToken from 'models/PasswordResetToken';
 import cloudinary from 'cloud/index';
 import { uploadImageToCloudinary } from 'utils/upload';
+import { ACCESS_TOKEN_LIFETIME } from 'constants/index';
 
 export const signup = asyncHandler(
   async (req: Request, res: Response, _next: NextFunction) => {
@@ -65,7 +66,7 @@ export const signin = asyncHandler(async (req: Request, res: Response) => {
 
   const payload = { id: existedUser?._id };
   const accessToken = JWT.sign(payload, JWT_TOKEN, {
-    expiresIn: '15m',
+    expiresIn: ACCESS_TOKEN_LIFETIME,
   });
   const refreshToken = JWT.sign(payload, JWT_TOKEN);
 
@@ -169,17 +170,20 @@ export const grantAccessToken = asyncHandler(
     const {
       body: { refreshToken },
     } = req;
+    // console.log({ grantRefreshToken: refreshToken });
 
     if (!refreshToken)
       return sendErrorResponse(res, 'unauthorized request', 403);
 
     const payload = JWT.verify(refreshToken, JWT_TOKEN) as { id: string };
+    // console.log({ grantPayload: payload });
     if (!payload?.id)
       return sendErrorResponse(res, 'unauthorized request', 401);
     const existedUser = await User.findOne({
       _id: payload?.id,
       tokens: refreshToken,
     });
+    // console.log({ existedUser });
 
     if (!existedUser) {
       // user is compromised, remove all the previous tokens
@@ -188,12 +192,12 @@ export const grantAccessToken = asyncHandler(
         { tokens: [] },
         { new: true, runValidators: true }
       );
-      return sendErrorResponse(res, 'unauthorized request', 401);
+      return sendErrorResponse(res, 'invalid request', 401);
     }
 
     const newPayload = { id: existedUser?._id };
     const newAccessToken = JWT.sign(newPayload, JWT_TOKEN, {
-      expiresIn: '15m',
+      expiresIn: ACCESS_TOKEN_LIFETIME,
     });
     const newRefreshToken = JWT.sign(newPayload, JWT_TOKEN);
 
@@ -406,3 +410,9 @@ export const updateProfileAvatar = asyncHandler(
     });
   }
 );
+
+export const test = asyncHandler(async (req: Request, res: Response) => {
+  return res.json({
+    ok: true,
+  });
+});

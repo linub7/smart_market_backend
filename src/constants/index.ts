@@ -3,3 +3,4 @@ export const PASSWORD_REGEX =
   /^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#\$%\^&\*])[a-zA-Z\d!@#\$%\^&\*]+$/;
 
 export const MAX_PRODUCT_IMAGES_COUNT = 4;
+export const ACCESS_TOKEN_LIFETIME = '60m';

@@ -39,7 +39,7 @@ router
   .patch(isAuth, fileParser, validate(CreateProductSchema), updateProduct)
   .delete(isAuth, deleteProduct);
 
-router.delete('/:id/images/:imageId', isAuth, deleteSingleImageFromProduct);
+router.put('/:id/images', isAuth, deleteSingleImageFromProduct);
 router.get('/categories/:category', getProductsByCategory);
 
 export default router;

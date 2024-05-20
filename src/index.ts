@@ -15,7 +15,7 @@ const log: Logger = createLogger('server');
 
 const PORT = 5000;
 if (NODE_ENV === 'development') {
-  app.use(morgan('dev'));
+  app.use(morgan('combined'));
 }
 
 app.use(express.static('src/public'));

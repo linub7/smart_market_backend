@@ -16,16 +16,17 @@ export const createProduct = asyncHandler(
   async (req: Request, res: Response) => {
     const {
       user: { id },
-      body: { name, description, price, category },
+      body: { name, description, price, category, date },
       files: { images },
     } = req;
-
+    console.log('create');
     const newProduct = new Product({
       owner: id,
       name,
       description,
       price: parseFloat(price),
       category,
+      purchasingDate: date,
     });
 
     const isMultipleImages = Array.isArray(images);
@@ -91,9 +92,29 @@ export const createProduct = asyncHandler(
 
     await newProduct.save();
 
-    return res
-      .status(201)
-      .json({ status: 'success', data: { product: newProduct } });
+    const formattedNewProduct = {
+      id: newProduct._id,
+      name: newProduct.name,
+      description: newProduct.description,
+      thumbnail: newProduct.thumbnail,
+      category: newProduct.category,
+      price: newProduct.price,
+      date: newProduct.purchasingDate,
+      images: newProduct?.images?.map(({ url }) => url),
+      seller: {
+        id: req.user.id,
+        name: req.user.name,
+        avatar: req.user.avatar,
+      },
+    };
+
+    return res.status(201).json({
+      status: 'success',
+      data: {
+        product: formattedNewProduct,
+        message: 'Product created successfully.',
+      },
+    });
   }
 );
 
@@ -102,13 +123,21 @@ export const updateProduct = asyncHandler(
     const {
       params: { id },
       user,
-      body: { name, description, price, category, thumbnail },
+      body: { name, description, price, category, thumbnail, date },
       files: { images },
     } = req;
 
+    console.log('edit');
+
     const updatedProduct = await Product.findOneAndUpdate(
       { _id: id, owner: user.id },
-      { name, description, price: parseFloat(price), category },
+      {
+        name,
+        description,
+        price: parseFloat(price),
+        category,
+        purchasingDate: date,
+      },
       { new: true, runValidators: true }
     );
     if (!updatedProduct)
@@ -189,7 +218,29 @@ export const updateProduct = asyncHandler(
     }
     await updatedProduct.save();
 
-    return res.json({ status: 'success', data: { product: updatedProduct } });
+    const formattedUpdatedProduct = {
+      id: updatedProduct._id,
+      name: updatedProduct.name,
+      description: updatedProduct.description,
+      thumbnail: updatedProduct.thumbnail,
+      category: updatedProduct.category,
+      price: updatedProduct.price,
+      date: updatedProduct.purchasingDate,
+      images: updatedProduct?.images?.map(({ url }) => url),
+      seller: {
+        id: req.user.id,
+        name: req.user.name,
+        avatar: req.user.avatar,
+      },
+    };
+
+    return res.json({
+      status: 'success',
+      data: {
+        message: 'Product updated successfully.',
+        product: formattedUpdatedProduct,
+      },
+    });
   }
 );
 
@@ -224,30 +275,60 @@ export const deleteSingleImageFromProduct = asyncHandler(
   async (req: Request, res: Response) => {
     const {
       user,
-      params: { id, imageId },
+      params: { id },
+      body: { imageUrl },
     } = req;
 
-    const updatedProduct = await Product.findOneAndUpdate(
+    console.log('deleted req received');
+    const targetProduct = await Product.findOne({ _id: id, owner: user.id });
+
+    await Product.findOneAndUpdate(
       { _id: id, owner: user.id },
       {
         $pull: {
-          images: { publicId: imageId },
+          images: { url: imageUrl },
         },
       },
       { new: true, runValidators: true }
     );
 
-    if (!updatedProduct)
-      return sendErrorResponse(res, 'Product not found', 404);
+    if (!targetProduct) return sendErrorResponse(res, 'Product not found', 404);
 
-    if (updatedProduct.thumbnail?.includes(imageId)) {
-      updatedProduct.thumbnail = updatedProduct.images[0]?.url;
-      await updatedProduct.save();
+    if (targetProduct.thumbnail?.includes(imageUrl)) {
+      targetProduct.thumbnail = targetProduct.images[0]?.url;
+      await targetProduct.save();
     }
 
-    await destroyImageFromCloudinary(imageId);
+    const images = targetProduct.images;
+    console.log({ images });
+    const targetImage = images.find((img) => img.url === imageUrl);
+    console.log({ targetImage });
 
-    return res.json({ status: 'success', data: { product: updatedProduct } });
+    await destroyImageFromCloudinary(targetImage?.publicId!);
+
+    const formattedTargetProduct = {
+      id: targetProduct._id,
+      name: targetProduct.name,
+      description: targetProduct.description,
+      thumbnail: targetProduct.thumbnail,
+      category: targetProduct.category,
+      price: targetProduct.price,
+      date: targetProduct.purchasingDate,
+      images: targetProduct?.images?.map(({ url }) => url),
+      seller: {
+        id: req.user.id,
+        name: req.user.name,
+        avatar: req.user.avatar,
+      },
+    };
+
+    return res.json({
+      status: 'success',
+      data: {
+        message: 'image deleted successfully.',
+        product: formattedTargetProduct,
+      },
+    });
   }
 );
 

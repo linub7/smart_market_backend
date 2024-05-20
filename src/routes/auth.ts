@@ -13,6 +13,7 @@ import {
   updatePassword,
   updateProfile,
   updateProfileAvatar,
+  test,
 } from 'controllers/auth';
 import {
   ForgotPasswordSchema,
@@ -59,5 +60,6 @@ router.patch(
 );
 router.post('/update-profile-avatar', isAuth, fileParser, updateProfileAvatar);
 router.get('/me', isAuth, myInfo);
+router.get('/test', isAuth, test);
 
 export default router;
